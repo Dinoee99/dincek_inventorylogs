@@ -23,7 +23,6 @@ local function getIdentifiers(src)
         end
     end
 
-    -- Clean discord id (discord:123 -> 123)
     if discord ~= 'N/A' then
         discord = discord:gsub('discord:', '')
     end
@@ -159,8 +158,6 @@ exports.ox_inventory:registerHook('swapItems', function(payload)
     local toInv               = stringifyInventory(payload.toInventory)
 
     local itemName, itemCount = formatItem(payload.fromSlot)
-
-    -- payload.toSlot can be a table OR a number (slot index)
     local toSlot              = payload.toSlot
     local toCount             = itemCount
     if type(toSlot) == 'table' then
@@ -169,7 +166,6 @@ exports.ox_inventory:registerHook('swapItems', function(payload)
 
     local webhook, scope = pickWebhookForSwap(fromInv, toInv)
 
-    -- Direction/action
     local srcStr         = tostring(src)
     local fromIsPlayer   = (tostring(fromInv) == srcStr)
     local toIsPlayer     = (tostring(toInv) == srcStr)
@@ -201,3 +197,4 @@ exports.ox_inventory:registerHook('swapItems', function(payload)
 
     sendDiscord(webhook, title, msg, 3145658)
 end)
+
