@@ -53,21 +53,17 @@ local function who(src)
     }, '')
 end
 
-
--- (prevents timeouts/429)
-local LogQueues    = {} 
+local LogQueues    = {}
 
 -- Tunables via convars
 local MAX_PER_TICK = tonumber(GetConvar('invlogs:max_per_tick', '8')) or 8    -- total sends per tick
 local TICK_MS      = tonumber(GetConvar('invlogs:tick_ms', '1000')) or 1000   -- ms between flushes
 local MAX_QUEUE    = tonumber(GetConvar('invlogs:max_queue', '5000')) or 5000 -- safety cap per webhook
 
-
 local function sendDiscord(webhook, title, description, color)
     if not webhook or webhook == '' then return end
 
     LogQueues[webhook] = LogQueues[webhook] or {}
-
 
     if #LogQueues[webhook] >= MAX_QUEUE then
         table.remove(LogQueues[webhook], 1)
@@ -98,7 +94,7 @@ CreateThread(function()
                         title = entry.title,
                         description = entry.description,
                         color = entry.color,
-                        footer = { text = 'INVENTORY LOGS' },
+                        footer = { text = 'TRAKTEN INV LOGS' },
                         timestamp = os.date('!%Y-%m-%dT%H:%M:%SZ')
                     } }
                 }
@@ -112,7 +108,6 @@ CreateThread(function()
         end
     end
 end)
-
 
 local function stringifyInventory(inv)
     if type(inv) == 'table' then
@@ -149,6 +144,33 @@ local function formatItem(slot)
     return name, count
 end
 
+local function invToPlayerId(inv)
+    if inv == nil then return nil end
+    local s = tostring(inv)
+    local n = tonumber(s)
+    if n and n > 0 and GetPlayerName(n) ~= nil then
+        return n
+    end
+    return nil
+end
+
+local function otherPlayerInfoLine(pid, label)
+    local p = getIdentifiers(pid)
+    local discordLine = 'N/A'
+    if p.discord ~= 'N/A' then
+        discordLine = ('<@%s> (`%s`)'):format(p.discord, p.discord)
+    end
+
+    return table.concat({
+        ('\n\n**%s:** %s'):format(label or 'Other Player', p.name),
+        ('\n**%s ID:** %s'):format(label or 'Other Player', p.id),
+        ('\n**%s License:** %s'):format(label or 'Other Player', p.license),
+        ('\n**%s Steam:** %s'):format(label or 'Other Player', p.steam),
+        ('\n**%s Discord:** %s'):format(label or 'Other Player', discordLine),
+    }, '')
+end
+
+
 
 exports.ox_inventory:registerHook('swapItems', function(payload)
     local src = payload.source
@@ -158,6 +180,7 @@ exports.ox_inventory:registerHook('swapItems', function(payload)
     local toInv               = stringifyInventory(payload.toInventory)
 
     local itemName, itemCount = formatItem(payload.fromSlot)
+
     local toSlot              = payload.toSlot
     local toCount             = itemCount
     if type(toSlot) == 'table' then
@@ -181,6 +204,16 @@ exports.ox_inventory:registerHook('swapItems', function(payload)
         title  = 'Item Uttagen från Inventory'
     end
 
+    local victimId = nil
+    if toIsPlayer then
+        local possibleVictim = invToPlayerId(fromInv)
+        if possibleVictim and possibleVictim ~= src then
+            victimId = possibleVictim
+            action   = 'LOOT (TOG FRÅN ANNAN SPELARE)'
+            title    = 'Player Loot'
+        end
+    end
+
     local msg = table.concat({
         who(src),
         ('\n**Scope:** %s'):format(scope),
@@ -195,6 +228,9 @@ exports.ox_inventory:registerHook('swapItems', function(payload)
         ('\n**ToCount (post):** %s'):format(tostring(toCount))
     }, '')
 
+    if victimId then
+        msg = msg .. otherPlayerInfoLine(victimId, 'Looted Player')
+    end
+
     sendDiscord(webhook, title, msg, 3145658)
 end)
-
