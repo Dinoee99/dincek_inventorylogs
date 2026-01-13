@@ -1,4 +1,4 @@
-# dincek_invlogs
+# OX_INVENTORY DISCORD LOGS
 
 Advanced Discord logging for **ox_inventory**, built for high-population FiveM servers.
 
@@ -78,4 +78,4 @@ This resource is built with performance and stability in mind:
 3. Start the resource
 
 ```cfg
-ensure dincek_invlogs
+ensure ox_inventory-discord-logs
